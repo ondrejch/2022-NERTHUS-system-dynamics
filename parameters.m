@@ -611,14 +611,14 @@ M_initial   = L_b*rho_b*A_s + L_s*rho_s*A_s + L_sc*A_s*rho_sc;
 %% Xenon reactivity effects
 
 gamma_Te = 6.1e-2;    % weighted yield for Te-135
-gamma_I  = 0;         % weighted yield for I-135
-gamma_Xe = 3e-2;      % weighted yield for Xe-135
+gamma_I  = 5.1135e-2; % weighted yield for I-135
+gamma_Xe = 1.1628e-2;  % weighted yield for Xe-135
 
 lam_Te   = 3.65e-02;  % decay constant for Te-135 (s^-1)
 lam_I    = 2.875e-5;  % decay constant for I-135 (s^-1)
 lam_Xe   = 2.0916e-5; % decay constant for Xe-135 (s^-1)
 
-lam_bubl = 5e-2;      % effective bubbling out constant (s^-1)
+lam_bubl = 2E-2;      % effective bubbling out constant (s^-1)
 sig_Xe   = 2.66449e-18; % (cm^2) microscopic cross-section for Xe (n,gamma) reaction 
 
 molc_wt  = .715*(7.016+18.998)+.16*(9.012+2*18.998)+.12*(4*18.998+232.038)+.005*(4*18.998+235.044); % (g/mol)
@@ -635,51 +635,6 @@ Xe_og = lam_bubl*Xe_0/(lam_Xe); % initial Xe conc. in off-gas system
 
 Sig_a = 1.02345; % (cm^-1) macroscopic absorption cross-section for core
 rhoXe_0 = (-sig_Xe / Sig_a) * (gamma_Te + gamma_I + gamma_Xe) * Sig_f_msdr * phi_0/(lam_Xe + sig_Xe * phi_0 + lam_bubl);
-
-%%% Parameters for Xe Bubble dynamics %%%
-% assuming that fuel salt is pumped from bottom through graphite 
-
-% Temperatures for model
-T_f     = 649.3 + 273.15; % fuel temp [K]
-T_c     = 616.7 + 273.15; % cold leg temp [K]
-T_h     = 682.0 + 273.15; % hot leg temp [K]
-T_phx   = 649.3 + 273.15; % PHX fuel salt temperature in PHX [K]
-
-T = T_f;
-
-% MSRE Core dimensions
-% D_core = 1.4732; % inner diameter of core [m]
-% L_core = 2.339; % height of core [m]
-% V_core = (pi * L_core^2 * D_core) - v_g; % [m^3] volume for flow
-
-N_A = 6.023 * 10^23;    % Avogadro's number [atoms/mol]
-k_Boltz = 1.380649e-23; % Boltzmann constant [J/K]
-R_gas = 8.314;          % Universal gas constant [J/mol * K] 
-r_Xe = 4.8e-11;         % ionic radius of Xe-135 [m] 
-gamma_s = 0.185;        % surface tension [N/m]
-
-rho_Xe135 = 5.894;  % [kg/m^3] mass density of Xe-135 @ STP (T = 273.15 K, P = 101325 Pa)
-rho_L = rho_fuel;   % [kg/m^3] mass density of fuel
-
-P_L = 34473.8;      % primary pressure of fuel salt [Pa] from https://info.ornl.gov/sites/publications/Files/Pub133245.pdf
-v_L = 0.2134;       % [m/s] velocity of fuel salt through graphite 
-v_B = 2 * sqrt(v_L); % [m/s] relative avg. velocity of bubble
-D_H = 1;
-
-H_Xe = (exp((-2698/T)-5.543)) * (N_A * 10^6 / 101325) ; % Henry's constant for Xe [atoms/(m^3 Pa)] --> [mol/cm^3*atm]*[e6 cm^3/m^3]*[1 atm/101325 Pa][6.023*10^23 atoms/mol]
-P_Xe0 = (Xe_0 * R_gas * T)/(v_L * ((H_Xe * R_gas * T) + 1)); % [Pa] Partial pressure of Xe-135 bubbles via manipulation of Henry's Law 
-mu_L = (exp((2000 / T) - 1.226)) / 1000 ; % dynamic viscosiy of fuel [Pa * s] -- > log(viscosity [cP]) = (2000/T [K]) - 1.226 for T = 460 - 600 C [ORNL-3913]
-We_crit = 4 * pi * (1 + (rho_L / rho_Xe135)); % critical Weber number
-
-Re_L = v_L * rho_L * D_H / mu_L; % Reynold's number of the liquid
-Re_BL = (abs(v_B - v_L) * 2 * rho_Xe135 * rho_L) / mu_L; % [dimensionless] Reynold's number of the bubble in the fuel 
-f_F = 0.046 * Re_BL^(-1/5); % Fanning friction factor from ORNL-TM-2245
-
-epsilon_s = (2 * f_F * v_L^3) / D_H; % specific energy dissipation 
-r_B_max = (We_crit^0.6 * gamma_s^0.6 * epsilon_s^-0.4)/(2^1.6 * (rho_L^2 * rho_Xe135)^0.2); % [m] maximum bubble radius
-
-D_m = (k_Boltz * T) / (6 * pi * mu_L * r_Xe); % mass diffusivity [m^2/s]
-k_m = 0.00127; % film mass transfer coefficient [m/s] --> varies from 8.47e-5 to 0.00127
 
 %% Alternative Ultimate Heat Sink
 % UHX have three nodes that runs HITEC and remove demand power
