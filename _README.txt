@@ -1,12 +1,13 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~
 ~~~~ File Directory ~~~~
 
-hsat.m			Needed for initial conditions of saturated region in parameters.m
-hsh.m			Needed for initial conditions of superheated region in parameters.m
+hsat.m			Function needed for initial conditions of saturated region in parameters.m
+hsh.m			Function needed for initial conditions of superheated region in parameters.m
 kin_dyn_edit.txt	Depletion data needed for read_depletion.m
 Nerthus_sim.slx		MATLAB Simulink simulation file
-parameters.m		All parameters and user inputs for the simulation
+parameters.m		Collects all parameters for the simulation. Is run by transient file.
 read_depletion.m	Needed to for depletion dependence option
+transients.m 		Designer for the transients. Run this before running simulation
 XSteam.m 		MATLAB program to calculate specific heat, density, and enthalpy of water
 
 * All of these files need to be in the same workspace

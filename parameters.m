@@ -1,117 +1,13 @@
 %%% NERTHUS Scalable MSR System
-%%% Author - Visura Pathirana & Nicholas Dunkle
+%%% Authors - Nicholas Dunkle & Visura Pathirana 
 %%% Project advisor - Dr. Ondrej Chvala
 
-%% Simulation Parameter File
-%This script calculate and initialize simulation parameters
-%User inputs are listed in the User Input section
-%Advised to leave user inputs commented to avoid conflicts
-%Advised to create a script using included example transient files as a template
+%% Simulation Parameter File Explanation
+% This script calculates and initializes simulation parameters
+% User inputs for transient designs are in transients.m
 
-% %% User Inputs
-
-%% Basic Simulation Parameters
-simtime = 6000;                                                            %Simulation time [s]
-ts_max = 1e-1;                                                             %Maximum timestep [s] 
-P=557;                                                                     %Operational thermal power [MW]
-    % Primarily designed for 557MW. Works best scaled from ~100MW to ~1000MW
-
-%%% Fuel Type
-%%% fuel_type = 235; for FLibe with U235
-%%% fuel_type = 233; for FLiBe with U233
-%%% fuel_type = 123; for FLiBe with U235 with depletion accounting
-fuel_type = 123;                                                           
-depletion_time = 0; %[days] int only. Work with fuel type 123.
-
-%%% Pump Trips
-Trip_P_pump=20000000;                                                      %Time at which primary pump is tripped [s]
-Trip_S_pump=20000000;                                                      %Time at which secondary pump is tripped [s]
-Trip_T_pump=20000000;                                                      %Time at which secondary pump is tripped [s]
-    % To turn off pump trip, set trip time >>> simtime
-
-%%% UHX Parameters (UHX = Ultimate Heat Exchanger)
-Trip_UHX = 20000000;                                                       %Time at which ultimate heat exchanger will be cut off [s]
-    % To turn off UHX trip, set trip time >>> simtime 
-
-%%% Source Step Reactivity Insertions & Sinusoidal Reactvity Insertions 
-sourcedata = [0 0 0];                                                      %Neutron source insertions [abs]
-sourcetime = [0 1000 2500];                                                %Neutron source insertion time [s]
-source = timeseries(sourcedata,sourcetime);                                %Defining source timeseries  
-    % Reactivity step insertions
-react_type = 0; % Set as 0 to use manual react data below. Set as 1-3 for benchmarks (next section)
-if react_type == 0
-    reactdata = [0 0 0];                                                   %Reactivity insertions [abs]
-    reacttime = [0 500 1000];                                              %Reactivity insertion time [s]
-    react = timeseries(reactdata,reacttime);                               %Defining source timeseries
-end
-    % Reactivity sinusoidal insertions
-omega          = 10.00000;                                                 %Frequncy of the sine wave [rad]
-sin_mag        = 0;                                                        %Amplitude of the sine wave [abs]
-dx             = round((2*pi/omega)/25, 2, 'significant');                 %Size of the time step [s]
-    % To turn off sinusoidal insertion, set sin_mag = 0
-    
-%% Load follow scenario
-LF_rate = 10;                                      % Rate of power demand change [% nominal per minute]
-LF_min = 5;                                        % Minimum power demand [% nominal power]
-LF_min2 = LF_min/100;                              % Minimum power demand [power / nominal power]
-LF_time = ((100 - LF_min)*60)/(LF_rate);           % Time of demand change [sec]
-rise = linspace(LF_min2, 1, 200);                  % Rise magnitude
-fall = linspace(1, LF_min2, 200);                  % Fall magnitude
-LF_t1 = 2000 + LF_time;                            % End time of power demand fall
-LF_t2 = LF_t1 + (2*LF_time);                       % Start time of power demand rise
-LF_t3 = LF_t2 + LF_time;                           % End time of power demand rise
-falltime1 = linspace(2000, LF_t1, 200);            % Fall duration
-risetime1 = linspace(LF_t2, LF_t3, 200);           % Rise duration
-%%% OLD
-% demanddata = [1 fall rise 1];                      % Power steps
-% demandtime = [0 falltime1 risetime1 simtime];      % Power times
-% demand = timeseries(demanddata,demandtime);        % Defining demand timeseries
-  % /Load follow scenario power demand
-    % To turn off power demand, uncomment next three lines
-% demanddata = [1 1 1 1 1];                        % Reactivity insertions [abs]
-% demandtime = [0 1000 2000 3000 5000];            % Reactivity insertion time [s]
-% demand = timeseries(demanddata,demandtime);      % Defining source timeseries  
-%%% /// OLD
-
-%%% Load follow scenario feedwater flow rate demand
-load_follow_type = 0; % Set as 0 to turn off. Set as 1 for load following
-fdw_nom = 557/2.8935; % The nominal full power feedwater flow rate
-if load_follow_type == 0
-    fdwdata = [fdw_nom fdw_nom];    
-    fdwtime = [0 simtime];      
-    fdw_demand = timeseries(fdwdata,fdwtime);
-end
-if load_follow_type == 1
-    fdw_min = (557*0.05)/2.8935;                        % Minimum flow rate
-    fdw_rise = linspace(fdw_min, fdw_nom, 200);         % Flow rate increase
-    fdw_fall = linspace(fdw_nom, fdw_min, 200);         % Flow rate decrease
-    fdwdata = [fdw_nom fdw_fall fdw_rise fdw_nom];      % Flow rates
-    fdwtime = [0 falltime1 risetime1 simtime];          % Change times
-    fdw_demand = timeseries(fdwdata,fdwtime);           % Feedwater demand
-end
-
-%% Benchmarks
-
-pcm2beta = 10^(-5);       % Converts pcm to absolute reactivity [unitless]
-bench1 = 49.2 * pcm2beta; % First benchmark insertion.    Prompt subcritical (1/10th PC)
-bench2 = 492 * pcm2beta;  % Second benchmark insertion.   Prompt critical (PC)
-bench3 = 984 * pcm2beta;  % Third benchmark insertion.    Prompt supercritical (2x PC)
-
-if react_type == 1
-    reactdata = [0 bench1];                                                %Reactivity insertions [abs]
-    reacttime = [0 2000];                                                  %Reactivity insertion time [s]
-    react = timeseries(reactdata,reacttime);                               %Defining source timeseries
-end
-if react_type == 2
-    reactdata = [0 bench2];                                                %Reactivity insertions [abs]
-    reacttime = [0 2000];                                                  %Reactivity insertion time [s]
-    react = timeseries(reactdata,reacttime);                               %Defining source timeseries
-end
-if react_type == 3
-    reactdata = [0 bench3];                                                %Reactivity insertions [abs]
-    reacttime = [0 2000];                                                  %Reactivity insertion time [s]
-    react = timeseries(reactdata,reacttime);                               %Defining source timeseries
-end
+% WARNING: Do not mess with this file unless you know what you are doing.
+% The file designed to be changed for most use cases is transients.m
 
 %% Scaling Factors (SF)
 
@@ -131,24 +27,6 @@ SF_fdw = P/2.8935;   % Steam Generator feedwater flow rate
 SF_linear = Power_ratio;                        % The scaling factor used for linear scaling (masses and volumes)
 SF_length = (Power_ratio)^(1/3);                % The scaling factor used for lengths
 SF_area = (Power_ratio)^(2/3);                  % The scaling factor used for areas
-
-%% Decay Heat Removal System (DHRS) Parameters
-%%% DHRS_MODE = 1; a sigmoid based DHRS (Normal DHRS)
-%%% DHRS_MODE = 2; a square pulse based DHRS (Broken DHRS)
-%%% DHRS_MODE = 1; allows modifications to sigmoid behavior using parameters with Normal DHRS in parameter file
-%%% DHRS_MODE = 2; allows cold slug insertions
-DHRS_MODE = 1; 
-DHRS_time=20000000;                                                        %Time at which DRACS will be activated [s]
-    % To turn off DHRS, set DHRS_time >>> simtime
-
-%%% Only for DHRS_MODE = 1
-DHRS_Power= P*(0.10);                                                      %Maximum power that can be removed by DHRS
-Power_Bleed= P*(0.00);                                                     %Some power can be removed from DRACS even when its not activated 
-    % Make sure Power_Bleed = 0 if you don't want it
-
-%%% Only for DHRS_MODE = 2
-SlugDeltaTemp = 30;                                                        %Temperature drop by broken DHRS [deg. C]
-Slug_duration = 10;                                                        %Duration of slug [s]
 
 %% Circulation Parameters (Salt resident times) {tau_x*vdot_x=volume_x}
     % Tau is the resident time of a unit of fluid in that component
@@ -383,7 +261,7 @@ lambda2 = 8.60979e-05;
 %% DRACS Parameters
 
 % Normal DHRS
-Power_Bleed= P*(0.00); %Some power will removed from DRACS even when its not used 
+Power_Bleed= P*(0.01); %Some power will removed from DRACS even when its not used 
 Epsilon=1E-3;
 DHRS_TIME_K=10;
 
@@ -420,7 +298,7 @@ A_sot       = 2786.2020*SF_area;   % [m^2]           % total surface area outer 
 
 %%% Initial State Calculations
 
-M_stm       = 0.018;       % [kg/mol]        18.0000       ; % Molar weight of steam          [lbm/lb-mol]
+M_stm   = 0.018;       % [kg/mol]        18.0000       ; % Molar weight of steam          [lbm/lb-mol]
 P_table = 11.0:0.1:12.5; %Pressure;
 Ts_avg = (459 + 411)/2 + 273;
 T_table = [];
@@ -618,23 +496,43 @@ lam_Te   = 3.65e-02;  % decay constant for Te-135 (s^-1)
 lam_I    = 2.875e-5;  % decay constant for I-135 (s^-1)
 lam_Xe   = 2.0916e-5; % decay constant for Xe-135 (s^-1)
 
-lam_bubl = 2E-2;      % effective bubbling out constant (s^-1)
+% lam_bubl = 0.9;
+lam_bubl = 0.0;
+% lam_bubl = 2E-2;      % effective bubbling out constant (s^-1)
 sig_Xe   = 2.66449e-18; % (cm^2) microscopic cross-section for Xe (n,gamma) reaction 
 
-molc_wt  = .715*(7.016+18.998)+.16*(9.012+2*18.998)+.12*(4*18.998+232.038)+.005*(4*18.998+235.044); % (g/mol)
+% molc_wt_old  = .715*(7.016+18.998)+.16*(9.012+2*18.998)+.12*(4*18.998+232.038)+.005*(4*18.998+235.044); % (g/mol)
+molc_wt = 0.437357369072*238.050787 + 0.000042667037*236.045566 + 0.009236083525*235.043928 + 0.000081850375*234.04095 + 0.451710108459*18.998403 + 0.022555326055*9.012183 + 0.079013208236*7.016003 + 0.000003387241*6.015123;
 molc_den = 0.001*rho_fuel /molc_wt;      % (mol/cm^3)
 U_den    = .005*molc_den*6.022E23;       % (#U/cm^3)
 U_sig    = 5.851e-22;                    % (cm^2)
-Sig_f_msdr = U_den*U_sig;                % (cm^-1)
+% Sig_f = U_den*U_sig;                % (cm^-1)
+Sig_f = 1.36931e-4;                 % (cm^-1)
+% Sig_f_msdr = 0.0249;    % (cm^-1) macroscopic fission cross-section for core
+% Sig_a = 1.02345;        % (cm^-1) macroscopic absorption cross-section for msdr core
+% Sig_f = 0.0249;
+Sig_a = 1.448116e-3;       % (cm^-1) macroscopic absorption cross-section for core. Number from serpent model
 
-phi_0 = P/(3.04414e-17*1e6*Sig_f_msdr);  % neutrons cm^-2 s^-1
-Te_0 = gamma_Te*Sig_f_msdr*phi_0/lam_Te; % SS value of Te-135 atoms / cm^3
-I_0 = ((gamma_I*Sig_f_msdr*phi_0) + (lam_Te*Te_0))/lam_I; % SS value of I-135 atoms / cm^3
-Xe_0 = (gamma_Xe*Sig_f_msdr*phi_0 + lam_I*I_0)/(lam_Xe + sig_Xe*phi_0 + lam_bubl); % SS % Xe-135 atoms / cm^3
+power_watts = P*(10^6); % Reactor thermal power in Watts
+joule_to_MeV = (1 / (1.60217733*(10^-13))); % Conversion of Joules to MeV
+MeV_per_fission = 200; % MeV thermal per fission reaction
+fiss_rate = power_watts * joule_to_MeV / MeV_per_fission; % Fission reactions per second
+U_micro_fiss_xs = 585*(10^-24); % Microscopic fission cross section of uranium 235 (cm^-2)
+% phi_0 = fiss_rate / Sig_f ; % nominal neutron flux (neutrons cm^-2 s^-1)
+
+% phi_0 = P/(3.04414e-17*1e6*Sig_f);  % neutrons cm^-2 s^-1
+phi_0 = 2.00819E+22; % From top of res file
+% phi_0 = 1.42072E+22; % From end of res file
+% Sig_f = fiss_rate / phi_0;
+
+Te_0 = gamma_Te*Sig_f*phi_0/lam_Te;    % SS value of Te-135 atoms / cm^3
+I_0 = ((gamma_I*Sig_f*phi_0) + (lam_Te*Te_0))/lam_I;    % SS value of I-135 atoms / cm^3
+Xe_0 = (gamma_Xe*Sig_f*phi_0 + lam_I*I_0)/(lam_Xe + sig_Xe*phi_0 + lam_bubl); % SS % Xe-135 atoms / cm^3
+% Xe_0_check = ((gamma_Xe + gamma_I)*(Sig_f * phi_0)) / (lam_Xe + sig_Xe*phi_0 + lam_bubl);
 Xe_og = lam_bubl*Xe_0/(lam_Xe); % initial Xe conc. in off-gas system
 
-Sig_a = 1.02345; % (cm^-1) macroscopic absorption cross-section for core
-rhoXe_0 = (-sig_Xe / Sig_a) * (gamma_Te + gamma_I + gamma_Xe) * Sig_f_msdr * phi_0/(lam_Xe + sig_Xe * phi_0 + lam_bubl);
+rhoXe_0 = (-sig_Xe / Sig_a) * (gamma_Te + gamma_I + gamma_Xe) * Sig_f * phi_0/(lam_Xe + sig_Xe * phi_0 + lam_bubl);
+rhoXe_0_check = -(sig_Xe*Xe_0) / Sig_a;
 
 %% Alternative Ultimate Heat Sink
 % UHX have three nodes that runs HITEC and remove demand power
@@ -644,5 +542,4 @@ n_UHX = 3;
 mn_UHX = (tau_HITEC_UHX*mdot_HITEC)/n_UHX;
 
 tau_ostg_shx = tau_HITEC_UHX_shx;
-
 
