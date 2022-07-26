@@ -2,9 +2,16 @@
 %spaced matrix with time for depletion data
 
 %read stored depletion data
-%depl_data_raw = importdata('kin_dyn_edit.txt');
-%depl_data_raw = importdata('flibe_PKPs.txt');
-depl_data_raw = importdata('thor_PKPs.txt');
+% depl_data_raw = importdata('kin_dyn_edit.txt');
+% depl_data_raw = importdata('flibe_PKPs.txt');
+% depl_data_raw = importdata('thor_PKPs.txt');
+
+if fuel_identity == 1
+    depl_data_raw = importdata('flibe_PKPs.txt');
+end
+if fuel_identity == 2
+    depl_data_raw = importdata('thor_PKPs.txt');
+end
 
 %turn depletion raw data to a matlab array
 depl_matx=depl_data_raw.data;

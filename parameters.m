@@ -7,7 +7,12 @@
 % User inputs for transient designs are in transients.m
 
 % WARNING: Do not mess with this file unless you know what you are doing.
-% The file designed to be changed for most use cases is transients.m
+% The file designed to be modified for most use cases is transients.m
+
+% For more information on the model, seek the following journal articles:
+%%% Modeling Methodology: "Molten Salt Reactor Power Plant System Dynamic Modeling using Nodal Methodology"
+%%% NERTHUS Overview: "NERTHUS Thermal Molten Salt Reactor Dynamic Model in MATLAB-Simulink"
+%%% Load Following with NERTHUS: "Effect of Xenon Removal Rate on Load Following in High Power Thermal Spectrum Molten-Salt Reactors (MSRs)"
 
 %% Scaling Factors (SF)
 
@@ -108,7 +113,7 @@ if fuel_type == 123
     a_g    = 1E-5*depl_grap_temp_coef(depl_index);
 end    
 
-beta_t = sum(beta); % Total delayed neutron fraction {MSRE}
+beta_t = sum(beta); % Total delayed neutron fraction
 
 % reactivity change in going from stationary to circulating fuel
 C0(1)  = ((beta(1))/Lam)*(1.0/(lam(1) - (exp(-lam(1)*tau_loop) - 1.0)/tau_core));
@@ -123,23 +128,53 @@ bterm    = 0;
 for i = 1:6
     bterm = bterm + beta(i)/(1.0 + ((1.0-exp(-lam(i)*tau_loop))/(lam(i)*tau_core)));
 end
-rho_0    = beta_t - bterm;      % reactivity lose due to delayed neutrons born outside of the core
+rho_0    = beta_t - bterm;      % reactivity loss due to delayed neutrons born outside of the core
+
+%% Benchmarks
+% Used if react_type == 1, 2, or 3 (transients.m file)
+
+dollar = (beta_t - rho_0) * 1e5;     % 1$ of Reactivity expressed in pcm. Modified by circulatory loss of DNPs
+pcm2beta = 10^(-5); % Converts pcm to absolute reactivity [unitless]
+bench1 = dollar * 0.1 * pcm2beta;    % First benchmark insertion.    Prompt subcritical (1/10th PC)
+bench2 = dollar * pcm2beta;          % Second benchmark insertion.   Prompt critical (PC)
+bench3 = dollar * 2 * pcm2beta;      % Third benchmark insertion.    Prompt supercritical (2x PC)
+bench4 = 100 * pcm2beta;             % Fourth benchmark 
+
+if react_type == 1
+    reactdata = [0 bench1];                                                %Reactivity insertions [abs]
+    reacttime = [0 benchmark_start];                                       %Reactivity insertion time [s]
+    react = timeseries(reactdata,reacttime);                               %Defining source timeseries
+end
+if react_type == 2
+    reactdata = [0 bench2];                                                %Reactivity insertions [abs]
+    reacttime = [0 benchmark_start];                                       %Reactivity insertion time [s]
+    react = timeseries(reactdata,reacttime);                               %Defining source timeseries
+end
+if react_type == 3
+    reactdata = [0 bench3];                                                %Reactivity insertions [abs]
+    reacttime = [0 benchmark_start];                                       %Reactivity insertion time [s]
+    react = timeseries(reactdata,reacttime);                               %Defining source timeseries
+end
+if react_type == 4
+    reactdata = [0 bench4];                                                %Reactivity insertions [abs]
+    reacttime = [0 benchmark_start];                                       %Reactivity insertion time [s]
+    react = timeseries(reactdata,reacttime);                               %Defining source timeseries
+end
 
 %% Core Design Parameters
 W_f      = mdot_fuel;           % Fluid flow rate (kg/s)
 m_f      = mdot_fuel*tau_core;  % fuel mass in core (kg)
 nn_f     = 2;                   % number of fuel nodes in core model
 mn_f     = (m_f/nn_f);          % fuel mass per node (kg)
-
 f_g_Ratio = 0.03;               % Fuel to graphite mass ratio
 
 % Core Upflow
 m_g      = m_f/f_g_Ratio;       % graphite mass (kg)
 
 % mcp is material mass * heat capacity of the material
-mcp_g1   = m_g*scp_graphite;    % mcp of graphite per lump (MW-s/�C)
-mcp_f1   = mn_f*scp_fuel;       % mcp of fuel salt per lump (MW-s/�C)
-mcp_f2   = mn_f*scp_fuel;       % mcp of fuel salt per lump (MW-s/�C)
+mcp_g1   = m_g*scp_graphite;    % mcp of graphite per lump (MW-s/C)
+mcp_f1   = mn_f*scp_fuel;       % mcp of fuel salt per lump (MW-s/C)
+mcp_f2   = mn_f*scp_fuel;       % mcp of fuel salt per lump (MW-s/C)
 
 % hA is the heat transfer coefficient * heat transfer area
 hA_fg    = 12.5325*SF_area_CORE; % HTC x heat transfer area (MW/C) calculated from MSRE scaling 
@@ -159,7 +194,7 @@ T0_g1  = T0_f1 + (k_g*P/hA_fg);
 
 %% Primary Heat Exchanger (PHX) parameters
 
-Tc_in =586;   % Core Inlet  Temp (C)
+Tc_in  = 586; % Core Inlet  Temp (C)
 Tc_out = 627; % Core Outlet Temp (C)
 
 % UA is calculated from log mean temperature drop as follows,
@@ -261,7 +296,7 @@ lambda2 = 8.60979e-05;
 %% DRACS Parameters
 
 % Normal DHRS
-Power_Bleed= P*(0.01); %Some power will removed from DRACS even when its not used 
+% Power_Bleed= P*(0.01); %Some power will removed from DRACS even when its not used 
 Epsilon=1E-3;
 DHRS_TIME_K=10;
 
@@ -297,7 +332,6 @@ A_sit       = 2483.0632*SF_area;   % [m^2]           % total surface area inner 
 A_sot       = 2786.2020*SF_area;   % [m^2]           % total surface area outer tube  [ft^2]
 
 %%% Initial State Calculations
-
 M_stm   = 0.018;       % [kg/mol]        18.0000       ; % Molar weight of steam          [lbm/lb-mol]
 P_table = 11.0:0.1:12.5; %Pressure;
 Ts_avg = (459 + 411)/2 + 273;
@@ -391,12 +425,12 @@ Z_ss        = 0.76634;      % Compressibility factor at 570 K, 60 atm
 R           = 8.314462E-6;  % [MJ/mol-�C] % Universal gas constant 
 
 %%%%%%%%%% HEAT TRANSFER COEFFICIENTS %%%%%%%%%%
-    % HTCs are not scaled because the proportionality between the heat flux and thermo dynamic drivinf force is constant
+    % HTCs are not scaled because the proportionality between the heat flux and thermo dynamic driving force is constant
 h_s_shx     = 9101.343578935E-6;
-h_pw        = h_s_shx; %9101.343578935E-6; % [MW/m^2-�C]      1.8070       ; % Effective primary to wall heat [BTU/s-ft^2-F]
-h_ws        = 5732.378387768E-6; % [MW/m^2-�C]      0.6672       ; % htc wall to steam node         [BTU/s-ft^2-F]
-h_wb        = 13349.334646671E-6; % [MW/m^2-�C]      2.16647      ; % htc wall to boil node          [BTU/s-ft^2-F]
-h_wsc       = 8385.005556375E-6; % [MW/m^2-�C]      1.18         ; %0.147 htc wall to subcooled node     [BTU/s-ft^2-F]
+h_pw        = h_s_shx; %9101.343578935E-6; % [MW/m^2-C]      1.8070       ; % Effective primary to wall heat [BTU/s-ft^2-F]
+h_ws        = 5732.378387768E-6;    % [MW/m^2-C]      0.6672       ; % htc wall to steam node         [BTU/s-ft^2-F]
+h_wb        = 13349.334646671E-6;   % [MW/m^2-C]      2.16647      ; % htc wall to boil node          [BTU/s-ft^2-F]
+h_wsc       = 8385.005556375E-6;    % [MW/m^2-C]      1.18         ; %0.147 htc wall to subcooled node     [BTU/s-ft^2-F]
 
 %%%%%%%%%% Steam Enthalpy Calculation%%%%%%%%%%
 temp_table = linspace(180, 650, 500);   % Temp range in C
@@ -488,51 +522,54 @@ M_initial   = L_b*rho_b*A_s + L_s*rho_s*A_s + L_sc*A_s*rho_sc;
 
 %% Xenon reactivity effects
 
-gamma_Te = 6.1e-2;    % weighted yield for Te-135
-gamma_I  = 5.1135e-2; % weighted yield for I-135
-gamma_Xe = 1.1628e-2;  % weighted yield for Xe-135
+% fission yield
+gamma_I      = 0.06390;     % fission yield for I-135 and short lived parents (Tc & Sb) for U-235 [www-nds.iaea.org]
+gamma_Xe     = 0.0025761;   % fission yield for Xe-135 for U-235 [www-nds.iaea.org]
+gamma_Pm     = 0.010816;    % fission yield for Pm-149 and short lived parents (Nb & Pr) for U-235 [www-nds.iaea.org]
+gamma_Sm     = 0.0;         % fission yield for Sm-149 for U-235 [www-nds.iaea.org]
 
-lam_Te   = 3.65e-02;  % decay constant for Te-135 (s^-1)
-lam_I    = 2.875e-5;  % decay constant for I-135 (s^-1)
-lam_Xe   = 2.0916e-5; % decay constant for Xe-135 (s^-1)
+% decay constants
+I_135_lam    = log(2)/(6.58*60*60);  % (s^-1) radioactive decay constant for I-135 [www-nds.iaea.org]
+Xe_135_lam   = log(2)/(9.14*60*60);  % (s^-1) radioactive decay constant for Xe-135 [www-nds.iaea.org]
+Pm_149_lam   = log(2)/(53.08*60*60); % (s^-1) radioactive decay constant for Pm-149 [www-nds.iaea.org]
 
-% lam_bubl = 0.9;
-lam_bubl = 0.0;
-% lam_bubl = 2E-2;      % effective bubbling out constant (s^-1)
-sig_Xe   = 2.66449e-18; % (cm^2) microscopic cross-section for Xe (n,gamma) reaction 
+% absorption cross sections
+sig_Xe       = 2.66449e-18;  % (cm^2) mircoscopic cross-section for Xe (n,gamma) reaction [www-nds.iaea.org]
+sig_Sm       = 4.032e-20;    % (cm^2) mircoscopic cross-section for Sm (n,x) reaction [www-nds.iaea.org]
 
-% molc_wt_old  = .715*(7.016+18.998)+.16*(9.012+2*18.998)+.12*(4*18.998+232.038)+.005*(4*18.998+235.044); % (g/mol)
-molc_wt = 0.437357369072*238.050787 + 0.000042667037*236.045566 + 0.009236083525*235.043928 + 0.000081850375*234.04095 + 0.451710108459*18.998403 + 0.022555326055*9.012183 + 0.079013208236*7.016003 + 0.000003387241*6.015123;
-molc_den = 0.001*rho_fuel /molc_wt;      % (mol/cm^3)
-U_den    = .005*molc_den*6.022E23;       % (#U/cm^3)
-U_sig    = 5.851e-22;                    % (cm^2)
-% Sig_f = U_den*U_sig;                % (cm^-1)
-Sig_f = 1.36931e-4;                 % (cm^-1)
-% Sig_f_msdr = 0.0249;    % (cm^-1) macroscopic fission cross-section for core
-% Sig_a = 1.02345;        % (cm^-1) macroscopic absorption cross-section for msdr core
-% Sig_f = 0.0249;
-Sig_a = 1.448116e-3;       % (cm^-1) macroscopic absorption cross-section for core. Number from serpent model
+% xenon removal rate 
+lam_bubble = 0.00500; % [s^-1] 0.005 is moderate; 0.02039 (MSRE's rate) is high
+%%% For low removal rates, saturation of the xenon concentration is
+%%% necessary to have the model successfully initialized. Controls for the
+%%% saturation are lam_b_upp, lam_b_down, and saturation_end.
 
-power_watts = P*(10^6); % Reactor thermal power in Watts
-joule_to_MeV = (1 / (1.60217733*(10^-13))); % Conversion of Joules to MeV
-MeV_per_fission = 200; % MeV thermal per fission reaction
-fiss_rate = power_watts * joule_to_MeV / MeV_per_fission; % Fission reactions per second
-U_micro_fiss_xs = 585*(10^-24); % Microscopic fission cross section of uranium 235 (cm^-2)
-% phi_0 = fiss_rate / Sig_f ; % nominal neutron flux (neutrons cm^-2 s^-1)
+% Fuel parameters
+mol_wt_fuel  = 64.64; % (g) weight of a mol of fuel salt
+mol_den_fuel = 0.0519; % (mol/cm3) molar denisty of fuel salt
+U_den        = 1.5632e20; % (#U/cm^3)
+U_sig        = 5.851e-22; % (cm^2) Microscopic fission cross section of the core
 
-% phi_0 = P/(3.04414e-17*1e6*Sig_f);  % neutrons cm^-2 s^-1
-phi_0 = 2.00819E+22; % From top of res file
-% phi_0 = 1.42072E+22; % From end of res file
-% Sig_f = fiss_rate / phi_0;
+% Neutronics parameters
+%%% Determinging average Sig_f and Sig_a  by weighting flux 
+Sig_f = 1.37520e-4 * (9.48937e+21 / (9.48937e+21 + 1.05375e+22)) + 1.50804e-3 * (1.05375e+22 / (9.48937e+21 + 1.05375e+22));
+Sig_a = 1.48040e-3 * (9.48937e+21 / (9.48937e+21 + 1.05375e+22)) + 2.59018e-3 * (1.05375e+22 / (9.48937e+21 + 1.05375e+22));
+phi_0 = 3.1849E+14; % From Serpent: total integrated flux divided by volume of lattice region
 
-Te_0 = gamma_Te*Sig_f*phi_0/lam_Te;    % SS value of Te-135 atoms / cm^3
-I_0 = ((gamma_I*Sig_f*phi_0) + (lam_Te*Te_0))/lam_I;    % SS value of I-135 atoms / cm^3
-Xe_0 = (gamma_Xe*Sig_f*phi_0 + lam_I*I_0)/(lam_Xe + sig_Xe*phi_0 + lam_bubl); % SS % Xe-135 atoms / cm^3
-% Xe_0_check = ((gamma_Xe + gamma_I)*(Sig_f * phi_0)) / (lam_Xe + sig_Xe*phi_0 + lam_bubl);
-Xe_og = lam_bubl*Xe_0/(lam_Xe); % initial Xe conc. in off-gas system
+% initial conditions
+I_0          = gamma_I*Sig_f*phi_0/I_135_lam; % (#/cm^3) steady state iodine concetration
+Xe_0         = ((gamma_Xe+gamma_I)*Sig_f*phi_0)/(Xe_135_lam + sig_Xe*phi_0 + lam_bubble); % (#/cm^3) steady state xenon concetration
+Pm_0         = gamma_Pm*Sig_f*phi_0/Pm_149_lam; % (#/cm^3) steady state Promethium concetration
+Sm_0         = ((gamma_Pm+gamma_Sm)*Sig_f)/(sig_Sm);
 
-rhoXe_0 = (-sig_Xe / Sig_a) * (gamma_Te + gamma_I + gamma_Xe) * Sig_f * phi_0/(lam_Xe + sig_Xe * phi_0 + lam_bubl);
-rhoXe_0_check = -(sig_Xe*Xe_0) / Sig_a;
+% Xenon saturation block controls 
+lam_b_upp = Xe_0*(1.01);    % Upper Xe concentration limit
+lam_b_down = Xe_0*(0.99);   % Lower Xe concentration limit
+saturation_end = 11000;     % [sec] time where saturation releases
+
+% reactivity from Fission product poisons
+rho_Xe       = (Xe_0*sig_Xe)/Sig_a;
+rho_Sm       = (Sm_0*sig_Sm)/Sig_a;
+
 
 %% Alternative Ultimate Heat Sink
 % UHX have three nodes that runs HITEC and remove demand power
