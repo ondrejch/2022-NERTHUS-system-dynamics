@@ -1,6 +1,8 @@
 # 2021-NERTHUS-core
 Scripts for our 2021 NERTHUS neutronic and depletion paper
 
+NERTHUS is the Nonproprietary Educative Reactor model with THorium and Uranium fuel Salts. Nerthus is an ancient Norse goddess of peace and prosperity.
+
 ~~~~~~~~~~~~~~~~~~~~~~~~
 ~~~~ File Directory ~~~~
 
